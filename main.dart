@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,228 +10,158 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: SignupPage(),
+      home: SplashCheck(),
     );
   }
 }
 
-class SignupPage extends StatefulWidget {
-  const SignupPage({super.key});
+// ================= SPLASH CHECK =================
+class SplashCheck extends StatelessWidget {
+  Future<bool> checkLogin() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey('email');
+  }
 
   @override
-  State<SignupPage> createState() => _SignupPageState();
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: checkLogin(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        return snapshot.data! ? HomePage() : LoginPage();
+      },
+    );
+  }
 }
 
-class _SignupPageState extends State<SignupPage> {
-  final _formKey = GlobalKey<FormState>();
+// ================= LOGIN PAGE =================
+class LoginPage extends StatefulWidget {
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
 
-  final TextEditingController nameCtrl = TextEditingController();
-  final TextEditingController mobileCtrl = TextEditingController();
-  final TextEditingController emailCtrl = TextEditingController();
-  final TextEditingController passwordCtrl = TextEditingController();
-  final TextEditingController confirmCtrl = TextEditingController();
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
-  bool hidePassword = true;
-
-  void submitForm() {
-    if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Registered Successfully ✅")),
-      );
+  Future<void> login() async {
+    if (emailController.text.isEmpty ||
+        passwordController.text.isEmpty) {
+      return;
     }
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('email', emailController.text);
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => HomePage()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xff2193b0),
-              Color(0xff6dd5ed),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Card(
-              elevation: 10,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(22),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-
-                      const Text(
-                        "Create Account",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xff1565C0),
-                        ),
-                      ),
-
-                      const SizedBox(height: 25),
-
-                      buildField(
-                        controller: nameCtrl,
-                        label: "Name",
-                        icon: Icons.person,
-                        validator: (value) {
-                          if (value!.isEmpty) {
-                            return "Name required";
-                          }
-                          if (!RegExp(r'^[a-zA-Z ]+$').hasMatch(value)) {
-                            return "Only alphabets allowed";
-                          }
-                          return null;
-                        },
-                      ),
-
-                      buildField(
-                        controller: mobileCtrl,
-                        label: "Mobile (+92XXXXXXXXXX)",
-                        icon: Icons.phone,
-                        keyboardType: TextInputType.phone,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Mobile required";
-                          }
-                          if (!RegExp(r'^\+92[0-9]{10}$').hasMatch(value)) {
-                            return "Invalid mobile format";
-                          }
-                          return null;
-                        },
-                      ),
-
-                      buildField(
-                        controller: emailCtrl,
-                        label: "Email",
-                        icon: Icons.email,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                              .hasMatch(value!)) {
-                            return "Invalid email";
-                          }
-                          return null;
-                        },
-                      ),
-
-                      buildField(
-                        controller: passwordCtrl,
-                        label: "Password",
-                        icon: Icons.lock,
-                        obscure: hidePassword,
-                        suffix: IconButton(
-                          icon: Icon(
-                            hidePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: const Color(0xff1E88E5),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              hidePassword = !hidePassword;
-                            });
-                          },
-                        ),
-                        validator: (value) {
-                          if (!RegExp(r'^[a-zA-Z0-9]+$')
-                              .hasMatch(value!)) {
-                            return "Alphanumeric only";
-                          }
-                          return null;
-                        },
-                      ),
-
-                      buildField(
-                        controller: confirmCtrl,
-                        label: "Confirm Password",
-                        icon: Icons.lock_outline,
-                        obscure: true,
-                        validator: (value) {
-                          if (value != passwordCtrl.text) {
-                            return "Password not matched";
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xff1565C0),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          onPressed: submitForm,
-                          child: const Text(
-                            "SIGN UP",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white, // 👈 white text
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+      appBar: AppBar(title: const Text("Login")),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                labelText: "Email",
+                border: OutlineInputBorder(),
               ),
             ),
-          ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: "Password",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: login,
+              child: const Text("Login"),
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
-  Widget buildField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool obscure = false,
-    Widget? suffix,
-    TextInputType keyboardType = TextInputType.text,
-    required String? Function(String?) validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscure,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: const Color(0xff1E88E5)),
-          suffixIcon: suffix,
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide:
-            const BorderSide(color: Color(0xff1E88E5)),
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
+// ================= HOME PAGE =================
+class HomePage extends StatefulWidget {
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String email = "";
+
+  @override
+  void initState() {
+    super.initState();
+    getEmail();
+  }
+
+  Future<void> getEmail() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      email = prefs.getString('email') ?? "";
+    });
+  }
+
+  Future<void> logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginPage()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Home")),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "Logged in Email:",
+              style: TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              email,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: logout,
+              child: const Text("Logout"),
+            ),
+          ],
         ),
-        validator: validator,
       ),
     );
   }
